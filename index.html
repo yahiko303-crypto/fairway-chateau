@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<link rel="stylesheet" href="header.css">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Fairway Chateau — Booking Calendar</title>
+
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Font: Dancing Script (cursive) -->
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+
+  <style>
+    .title { font-family: 'Dancing Script', cursive; color: #10B981; }
+    .fc-prev-button, .fc-next-button { background:none !important; border:none !important; box-shadow:none !important; color:#333 !important; font-size:1.2rem !important; font-weight:300 !important; width:auto !important; height:auto !important; padding:0 4px !important; }
+    .fc-prev-button:hover, .fc-next-button:hover { color:#000 !important; background:none !important; }
+    .fc-prev-button:disabled, .fc-next-button:disabled { color:#bbb !important; cursor:not-allowed !important; }
+    .slot-btn:disabled { opacity:0.55; cursor:not-allowed; }
+    .drawer { transition: transform .22s ease; transform: translateX(100%); z-index:50; }
+    .drawer.open { transform: translateX(0%); }
+
+    @media (max-width: 640px) {
+      body { padding:1rem; }
+      #calendar { min-width:320px; overflow-x:auto; }
+      #drawer { width:100% !important; max-width:none !important; }
+      #slotsListContainer { max-height:60vh !important; }
+    }
+
+    @media (min-width: 641px) { #slotsListContainer { max-height:400px; } }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-gray-100 to-white min-h-screen flex items-start justify-center p-4 sm:p-8">
+
+<div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+  <!-- Left: Hero -->
+  <div class="lg:col-span-1 rounded-xl overflow-hidden shadow-lg bg-white">
+    <img alt="golf simulator" src="https://images.squarespace-cdn.com/content/v1/5559fdd6e4b0e3eb2cfa9394/2eeadb90-1b23-44e0-852f-aaa71f8f03f4/2121212.png?format=2500w">
+    <div class="p-4 sm:p-6">
+      <h2 class="text-xl sm:text-2xl font-bold mb-1">Fairway Chateau</h2>
+      <p class="text-gray-600 mb-4 text-sm sm:text-base">Pick a date and choose an available time slot; there is a 4-hour minimum.</p>
+      <ul class="text-xs sm:text-sm text-gray-600 space-y-2">
+        <li>Business hours: <span id="bizHours" class="font-medium">12:00 - 12:00</span></li>
+        <li>Slot length: <span id="slotLength" class="font-medium">Minimum 4 hours</span></li>
+        <li>Bookings shown on calendar as <span class="font-medium text-red-600">Booked</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Middle: Calendar -->
+  <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-4 sm:p-6">
+    <div id="calendar"></div>
+  </div>
+</div>
+
+<!-- Right drawer -->
+<div id="drawer" class="fixed right-0 top-0 h-full w-full sm:max-w-sm drawer bg-white shadow-2xl p-4 sm:p-6 overflow-auto">
+  <div class="flex items-start justify-between">
+    <div>
+      <h3 id="drawerTitle" class="text-lg sm:text-xl font-semibold">Book a time</h3>
+      <p id="drawerDate" class="text-xs sm:text-sm text-gray-600 mt-1"></p>
+    </div>
+    <button id="closeDrawer" class="text-gray-500 hover:text-gray-800 text-xl">&times;</button>
+  </div>
+
+  <div class="mt-4">
+    <h4 class="font-medium text-gray-700 mb-2">Available time slots</h4>
+    <div id="slotsListContainer" class="border rounded-lg p-2 sm:p-3" style="max-height:400px; overflow-y:auto;">
+      <div id="slotsList" class="grid gap-2"></div>
+    </div>
+  </div>
+
+  <div class="mt-6">
+    <h4 class="font-medium text-gray-700 mb-2">Your details</h4>
+    <input id="nameInput" placeholder="Your name" class="w-full border rounded px-3 py-2 mb-2 text-sm sm:text-base" />
+    <input id="emailInput" placeholder="Email (optional)" class="w-full border rounded px-3 py-2 mb-2 text-sm sm:text-base" />
+    <input id="phoneInput" placeholder="Phone number" class="w-full border rounded px-3 py-2 mb-2 text-sm sm:text-base" />
+    <input id="locationInput" placeholder="Event location" class="w-full border rounded px-3 py-2 mb-2 text-sm sm:text-base" />
+    <select id="indoorOutdoorInput" class="w-full border rounded px-3 py-2 mb-2 text-sm sm:text-base">
+      <option value="">Indoor or Outdoor?</option>
+      <option value="Indoor">Indoor</option>
+      <option value="Outdoor">Outdoor</option>
+    </select>
+  </div>
+
+  <div class="mt-6 space-y-3">
+    <button id="confirmBtn" class="w-full bg-indigo-600 text-white py-2 rounded disabled:opacity-60 text-sm sm:text-base">Confirm booking</button>
+    <button id="cancelBtn" class="w-full bg-gray-100 py-2 rounded text-sm sm:text-base">Close</button>
+  </div>
+
+  <div class="mt-6 text-xs sm:text-sm text-gray-500">
+    <p><strong>Note:</strong> Booked slots are blocked but you can choose any other open time. Bookings are saved to Google Sheet.</p>
+  </div>
+</div>
+
+<script>
+const businessStart = 0;
+const businessEnd = 24;
+const TIME_INTERVAL_MINUTES = 60;
+document.getElementById('bizHours').innerText = '24 Hours';
+document.getElementById('slotLength').innerText = `Minimum 4 hours`;
+
+const STORAGE_KEY = 'simulator_bookings_v1';
+let bookedEvents = loadBookings();
+
+const calendarEl = document.getElementById('calendar');
+const calendar = new FullCalendar.Calendar(calendarEl, {
+  initialView: 'dayGridMonth',
+  headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+  height: 'auto',
+  selectable: true,
+  selectMirror: true,
+  businessHours: { daysOfWeek: [0,1,2,3,4,5,6], startTime: '00:00', endTime: '23:59' },
+  events: () => bookedEvents.map(e => ({
+    id: e.id,
+    title: `BOOKED • ${e.title || 'Slot'}`,
+    start: e.startISO,
+    end: e.endISO,
+    color: '#ef4444',
+    extendedProps: { name: e.name, email: e.email }
+  })),
+  dateClick(info) { openDrawer(info.date); },
+  eventClick(info) {
+    const ev = info.event;
+    alert(`This slot is already booked.\n\n${ev.title}\n${formatLocal(ev.start)} — ${formatLocal(ev.end)}\nBooked by: ${ev.extendedProps.name || '—'}`);
+  }
+});
+calendar.render();
+
+// ✅ Use Netlify function URL for both GET and POST
+const BOOKINGS_URL = '/.netlify/functions/bookings';
+
+// Sync existing bookings from Google Sheet via Netlify
+function syncBookings() {
+  fetch(BOOKINGS_URL)
+    .then(res => res.json())
+    .then(data => {
+      bookedEvents = data.map(row => ({
+        id: row.id || 'bk_' + Date.now() + Math.random().toString(36).slice(2,6),
+        name: row.name || 'Guest',
+        email: row.email || '',
+        phone: row.phone || '',
+        location: row.location || '',
+        indoorOutdoor: row.indoorOutdoor || '',
+        startISO: row.startISO,
+        endISO: row.endISO,
+        title: row.name || 'Booking'
+      }));
+
+      saveBookings();
+      calendar.getEvents().forEach(ev => ev.remove());
+      bookedEvents.forEach(e => {
+        calendar.addEvent({
+          id: e.id,
+          title: `BOOKED • ${e.name}`,
+          start: e.startISO,
+          end: e.endISO,
+          color: '#ef4444',
+          extendedProps: { name: e.name, email: e.email, phone: e.phone, location: e.location, indoorOutdoor: e.indoorOutdoor }
+        });
+      });
+
+      updateSlotHighlighting(slotsList);
+    })
+    .catch(err => console.error('Error syncing bookings:', err));
+}
+
+syncBookings();
+setInterval(syncBookings, 5000);
+
+/* Drawer Logic */
+const drawer = document.getElementById('drawer');
+const drawerTitle = document.getElementById('drawerTitle');
+const slotsList = document.getElementById('slotsList');
+const closeDrawerBtn = document.getElementById('closeDrawer');
+const cancelBtn = document.getElementById('cancelBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+const nameInput = document.getElementById('nameInput');
+let chosenSlot = null;
+let drawerStartDate = null;
+let selectedSlots = [];
+let mandatorySlots = [];
+
+closeDrawerBtn.addEventListener('click', closeDrawer);
+cancelBtn.addEventListener('click', closeDrawer);
+confirmBtn.addEventListener('click', confirmBooking);
+
+function openDrawer(dateObj) {
+  drawer.classList.add('open');
+  drawerTitle.innerText = 'Pick a time';
+  chosenSlot = null;
+  selectedSlots = [];
+  mandatorySlots = [];
+  nameInput.value = '';
+  confirmBtn.disabled = true;
+  slotsList.innerHTML = '';
+
+  drawerStartDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+  for (let i = 0; i < 3; i++) { renderTimeSlotsForDate(drawerStartDate); drawerStartDate.setDate(drawerStartDate.getDate() + 1); }
+
+  slotsList.onscroll = () => {
+    if (slotsList.scrollTop + slotsList.clientHeight >= slotsList.scrollHeight - 50) {
+      renderTimeSlotsForDate(drawerStartDate);
+      drawerStartDate.setDate(drawerStartDate.getDate() + 1);
+    }
+  };
+}
+
+function closeDrawer() { drawer.classList.remove('open'); }
+
+function renderTimeSlotsForDate(date) {
+  const dayContainer = document.createElement('div');
+  dayContainer.className = 'mb-4';
+
+  const header = document.createElement('div');
+  header.className = 'font-semibold text-gray-700 mb-2';
+  header.innerText = date.toDateString();
+  dayContainer.appendChild(header);
+
+  const slots = generateTimeSlotsForDay(date);
+  slots.forEach(slot => {
+    const btn = document.createElement('button');
+    btn.className = 'slot-btn w-full text-left rounded-md px-3 py-2 border mb-1';
+    btn.innerHTML = `<div class="flex justify-between items-center">
+                       <div><strong>${slot.display}</strong>
+                       <div class="text-xs text-gray-500">${slot.humanRange}</div></div>
+                     </div>`;
+    btn.disabled = !slot.available;
+    btn.style.background = slot.available ? '#ecfccb' : '#fee2e2';
+    btn.style.borderColor = slot.available ? '#bbf7d0' : '#fecaca';
+    if (!slot.available) btn.title = 'This slot is booked';
+    btn.dataset.time = slot.start.toISOString();
+
+    btn.addEventListener('click', () => handleSlotClick(slot));
+    dayContainer.appendChild(btn);
+  });
+
+  slotsList.appendChild(dayContainer);
+}
+
+function handleSlotClick(slot) {
+  if (!slot.available) return;
+  if (selectedSlots.length === 0) {
+    mandatorySlots = getConsecutiveSlots(slot, 4);
+    selectedSlots = [...mandatorySlots];
+    chosenSlot = mandatorySlots[0];
+  } else {
+    const isMandatory = mandatorySlots.some(s => s.start.getTime() === slot.start.getTime());
+    const exists = selectedSlots.some(s => s.start.getTime() === slot.start.getTime());
+    if (isMandatory) { selectedSlots = []; mandatorySlots = []; chosenSlot = null; }
+    else if (exists) { const idx = selectedSlots.findIndex(s => s.start.getTime() === slot.start.getTime()); if (idx >= mandatorySlots.length) selectedSlots = selectedSlots.slice(0, idx); }
+    else { const lastSelected = selectedSlots[selectedSlots.length - 1]; if (slot.start.getTime() === addMinutes(lastSelected.start, TIME_INTERVAL_MINUTES).getTime()) selectedSlots.push(slot); else alert('Please select the next consecutive hour.'); }
+  }
+  updateSlotHighlighting(slotsList);
+  confirmBtn.disabled = selectedSlots.length === 0;
+}
+
+function getConsecutiveSlots(startSlot, hours = 4) {
+  const result = [];
+  let remainingHours = hours;
+  let currentDate = new Date(startSlot.start);
+  while (remainingHours > 0) {
+    const daySlots = generateTimeSlotsForDay(currentDate);
+    let idx = daySlots.findIndex(s => s.start.getTime() === currentDate.getTime());
+    if (idx === -1) idx = 0;
+    while (idx < daySlots.length && remainingHours > 0) {
+      if (daySlots[idx].available) result.push(daySlots[idx]);
+      currentDate = addMinutes(daySlots[idx].start, TIME_INTERVAL_MINUTES);
+      idx++;
+      remainingHours--;
+    }
+    if (remainingHours > 0) currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1, 0, 0, 0);
+  }
+  return result;
+}
+
+// ✅ FIXED OVERLAP CHECK
+function updateSlotHighlighting(container) {
+  Array.from(container.querySelectorAll('button')).forEach(btn => {
+    const time = new Date(btn.dataset.time).getTime();
+    const isBooked = bookedEvents.some(ev => {
+      const evStart = new Date(ev.startISO).getTime();
+      const evEnd = new Date(ev.endISO).getTime();
+      return time < evEnd && addMinutes(new Date(time), TIME_INTERVAL_MINUTES).getTime() > evStart;
+    });
+    const isSelected = selectedSlots.some(s => s.start.getTime() === time);
+    const isMandatory = mandatorySlots.some(s => s.start.getTime() === time);
+
+    if (isBooked) {
+      btn.style.background = '#fee2e2';
+      btn.style.color = 'black';
+      btn.style.borderColor = '#fecaca';
+      btn.disabled = true;
+      btn.title = 'This slot is booked';
+    } else if (isSelected) {
+      btn.style.background = '#065f46';
+      btn.style.color = 'white';
+      btn.style.borderColor = '#064e3b';
+      btn.title = isMandatory ? 'Part of 4-hour minimum' : 'Selected';
+      btn.disabled = false;
+    } else {
+      btn.style.background = '#ecfccb';
+      btn.style.color = 'black';
+      btn.style.borderColor = '#bbf7d0';
+      btn.title = '';
+      btn.disabled = false;
+    }
+  });
+}
+
+function generateTimeSlotsForDay(date) {
+  const slots = [];
+  let current = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+  const endDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 0);
+  while (current < endDay) {
+    const slotStart = new Date(current);
+    const slotEnd = addMinutes(slotStart, 240);
+    slots.push({
+      start: slotStart,
+      end: slotEnd,
+      display: formatTime(slotStart),
+      humanRange: `${formatLocal(slotStart)} — ${formatLocal(slotEnd)}`,
+      available: !isOverlappingExisting(slotStart, slotEnd)
+    });
+    current = addMinutes(current, TIME_INTERVAL_MINUTES);
+  }
+  return slots;
+}
+
+function isOverlappingExisting(startDate, endDate) {
+  return bookedEvents.some(ev => {
+    const s = new Date(ev.startISO);
+    const e = new Date(ev.endISO);
+    return startDate < e && endDate > s;
+  });
+}
+
+function confirmBooking() {
+  if (!chosenSlot) return alert('Pick a time slot first.');
+
+  const name = nameInput.value.trim() || 'Guest';
+  const email = document.getElementById('emailInput').value.trim() || '';
+  const phone = document.getElementById('phoneInput').value.trim() || '';
+  const location = document.getElementById('locationInput').value.trim() || '';
+  const indoorOutdoor = document.getElementById('indoorOutdoorInput').value || '';
+  const startISO = toLocalISO(selectedSlots[0].start);
+  const endISO = toLocalISO(selectedSlots[selectedSlots.length - 1].end);
+  const id = 'bk_' + Date.now();
+
+  const booking = { id, name, email, phone, location, indoorOutdoor, startISO, endISO };
+
+  bookedEvents.push(booking);
+  calendar.addEvent({
+    id: booking.id,
+    title: `BOOKED • ${booking.name}`,
+    start: booking.startISO,
+    end: booking.endISO,
+    color: '#ef4444',
+    extendedProps: { name: booking.name, email: booking.email }
+  });
+
+  updateSlotHighlighting(slotsList);
+  closeDrawer();
+  alert('Booking confirmed!');
+
+  // ✅ POST via Netlify function
+  fetch(BOOKINGS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(booking)
+  })
+  .then(res => res.json())
+  .then(data => console.log('Booking saved:', data))
+  .catch(err => {
+    console.error('Failed to save booking:', err);
+    alert('Booking confirmed locally but failed to save to Google Sheet.');
+  });
+
+  saveBookings();
+}
+
+function addMinutes(date, mins) { return new Date(date.getTime() + mins * 60000); }
+function formatTime(d) { return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function formatLocal(d) { return d.toLocaleString([], { hour: '2-digit', minute: '2-digit', month:'short', day:'numeric' }); }
+function toLocalISO(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString(); }
+
+function saveBookings() { localStorage.setItem(STORAGE_KEY, JSON.stringify(bookedEvents)); }
+function loadBookings() { const data = localStorage.getItem(STORAGE_KEY); return data ? JSON.parse(data) : []; }
+</script>
+</body>
+</html>
