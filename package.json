@@ -1,0 +1,23 @@
+{
+  "name": "fairway-chateau",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yahiko303-crypto/fairway-chateau.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yahiko303-crypto/fairway-chateau/issues"
+  },
+  "homepage": "https://github.com/yahiko303-crypto/fairway-chateau#readme",
+  "dependencies": {
+    "googleapis": "^159.0.0"
+  }
+}
