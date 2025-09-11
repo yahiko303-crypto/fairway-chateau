@@ -1,23 +1,34 @@
 // netlify/functions/bookings.js
-import fetch from 'node-fetch';
+exports.handler = async function(event, context) {
+  if (event.httpMethod === 'GET') {
+    // Return a sample bookings array for testing
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        {
+          id: "bk_1",
+          name: "John Doe",
+          startISO: "2025-09-12T10:00:00.000Z",
+          endISO: "2025-09-12T14:00:00.000Z"
+        }
+      ])
+    };
+  }
 
-export async function handler(event, context) {
-  try {
-    const response = await fetch('https://script.google.com/macros/s/AKfycbyuqzkCcbNv5KzJaE2wQIXSLLpG2YT9esWw1O1vQbgGE1NiJF-q9n3VofcI_C4fbFbM/exec');
-    const data = await response.json();
+  if (event.httpMethod === 'POST') {
+    const booking = JSON.parse(event.body);
+    // Here you would save to Google Sheets or some database
+    console.log("Received booking:", booking);
 
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*', // allows your front-end to fetch
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ message: "Booking received!" })
     };
   }
-}
+
+  return {
+    statusCode: 405,
+    body: "Method Not Allowed"
+  };
+};
