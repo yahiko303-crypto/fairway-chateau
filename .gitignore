@@ -1,0 +1,4 @@
+# Ignore node_modules and credentials
+node_modules/
+netlify/functions/credentials.json
+
