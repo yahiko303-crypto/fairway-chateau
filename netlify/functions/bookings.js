@@ -1,17 +1,17 @@
-// temporary change to trigger git
-
+// bookings.js for Netlify functions using Google Sheets
 
 const { google } = require('googleapis');
-const credentials = require('../credentials.json'); // Path to your credentials.json file
 
+// Constants
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const SPREADSHEET_ID = '11JYeJpoujuLO1DoAGBaBjHCjVil1pUSbh43yeipX00w';
-const SHEET_NAME = 'Sheet1'; // Adjust if your sheet name is different
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID; // Add this env variable in Netlify
+const SHEET_NAME = process.env.SHEET_NAME || 'Sheet1'; // Optional env variable, default to Sheet1
 
+// JWT authentication using environment variables
 const auth = new google.auth.JWT(
-  credentials.client_email,
+  process.env.GOOGLE_CLIENT_EMAIL,
   null,
-  credentials.private_key,
+  process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
   SCOPES
 );
 
@@ -22,7 +22,7 @@ exports.handler = async function(event, context) {
     try {
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!A:H`, // Adjust columns as needed
+        range: `${SHEET_NAME}!A:H`,
       });
 
       const rows = res.data.values || [];
