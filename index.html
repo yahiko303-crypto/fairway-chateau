@@ -135,7 +135,6 @@ calendar.render();
 // ✅ Use Netlify function URL for both GET and POST
 const BOOKINGS_URL = '/.netlify/functions/bookings';
 
-// Sync existing bookings from Google Sheet via Netlify
 function syncBookings() {
   fetch(BOOKINGS_URL)
     .then(res => res.json())
@@ -152,8 +151,8 @@ function syncBookings() {
         title: row.name || 'Booking'
       }));
 
-      saveBookings();
       calendar.getEvents().forEach(ev => ev.remove());
+
       bookedEvents.forEach(e => {
         calendar.addEvent({
           id: e.id,
@@ -161,7 +160,13 @@ function syncBookings() {
           start: e.startISO,
           end: e.endISO,
           color: '#ef4444',
-          extendedProps: { name: e.name, email: e.email, phone: e.phone, location: e.location, indoorOutdoor: e.indoorOutdoor }
+          extendedProps: {
+            name: e.name,
+            email: e.email,
+            phone: e.phone,
+            location: e.location,
+            indoorOutdoor: e.indoorOutdoor
+          }
         });
       });
 
@@ -368,18 +373,18 @@ function confirmBooking() {
   closeDrawer();
   alert('Booking confirmed!');
 
-  // ✅ POST via Netlify function
-  fetch(BOOKINGS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(booking)
-  })
-  .then(res => res.json())
-  .then(data => console.log('Booking saved:', data))
-  .catch(err => {
-    console.error('Failed to save booking:', err);
-    alert('Booking confirmed locally but failed to save to Google Sheet.');
-  });
+// POST booking to Netlify function (which saves to Google Sheets)
+fetch(BOOKINGS_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(booking)
+})
+.then(res => res.json())
+.then(data => console.log('Booking saved:', data))
+.catch(err => {
+  console.error('Failed to save booking:', err);
+  alert('Booking confirmed locally but failed to save to Google Sheet.');
+});
 
   saveBookings();
 }

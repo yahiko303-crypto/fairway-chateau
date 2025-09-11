@@ -1,34 +1,35 @@
-// netlify/functions/bookings.js
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyuqzkCcbNv5KzJaE2wQIXSLLpG2YT9esWw1O1vQbgGE1NiJF-q9n3VofcI_C4fbFbM/exec'; // from Step 1
+
+const fetch = require('node-fetch');
+
 exports.handler = async function(event, context) {
   if (event.httpMethod === 'GET') {
-    // Return a sample bookings array for testing
+    // Fetch bookings from Google Sheet
+    const res = await fetch(GOOGLE_SHEET_URL);
+    const data = await res.json();
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([
-        {
-          id: "bk_1",
-          name: "John Doe",
-          startISO: "2025-09-12T10:00:00.000Z",
-          endISO: "2025-09-12T14:00:00.000Z"
-        }
-      ])
+      body: JSON.stringify(data)
     };
   }
 
   if (event.httpMethod === 'POST') {
     const booking = JSON.parse(event.body);
-    // Here you would save to Google Sheets or some database
-    console.log("Received booking:", booking);
 
+    // Send booking to Google Sheet
+    const res = await fetch(GOOGLE_SHEET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(booking)
+    });
+
+    const result = await res.json();
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Booking received!" })
+      body: JSON.stringify({ message: 'Booking saved!', result })
     };
   }
 
-  return {
-    statusCode: 405,
-    body: "Method Not Allowed"
-  };
+  return { statusCode: 405, body: 'Method Not Allowed' };
 };
